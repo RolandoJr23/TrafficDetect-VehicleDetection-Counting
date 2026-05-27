@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tanauan City TDS</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('assets', filename='tanauancitylogo_favicon.png') }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="{{ url_for('assets', filename='tanauancitylogo_favicon.png') }}"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body class="capture-page">
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="{{ url_for('index') }}">
+          <span class="brand-mark">
+            <img
+              src="{{ url_for('assets', filename='tanauancitylogo.png') }}"
+              alt="Tanauan City logo"
+            />
+          </span>
+          <span>
+            <strong>Tanauan Traffic</strong>
+            <small>Video Capture</small>
+          </span>
+        </a>
+
+        <nav class="nav-links" aria-label="Primary">
+          <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+          <a class="nav-link active" href="{{ url_for('videocapture') }}">Video Capture</a>
+        </nav>
+      </header>
+
+      <section class="hero compact-hero">
+        <div>
+          <p class="eyebrow">Vehicle Detection and Counting</p>
+          <h1>Traffic detection workspace.</h1>
+          <p class="lead">
+            Start your webcam or connect an IP camera / RTSP stream to monitor vehicles
+            in real time.
+          </p>
+        </div>
+        <div class="status-card">
+          <div class="status-dot"></div>
+          <div class="status-stack">
+            <p class="status-label">Vehicle Count</p>
+            <div class="direction-metrics">
+              <div class="direction-metric">
+                <span>OUT</span>
+                <strong id="vehicle-out-total">0</strong>
+              </div>
+              <div class="direction-metric">
+                <span>IN</span>
+                <strong id="vehicle-in-total">0</strong>
+              </div>
+            </div>
+            <small id="vehicle-status">Waiting for live detection</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="mode-switcher panel">
+        <div class="panel-head">
+          <h2>Select Input Source</h2>
+          <p>Choose one mode at a time so the active detector fills the workspace.</p>
+        </div>
+
+        <div class="mode-buttons" role="tablist" aria-label="Input source">
+          <button id="mode-webcam" class="mode-btn active" type="button">Browser Webcam</button>
+          <button id="mode-stream" class="mode-btn" type="button">IP Camera / RTSP</button>
+        </div>
+      </section>
+
+      <main class="grid">
+        <section id="webcam-panel" class="panel mode-panel active">
+          <div class="panel-head">
+            <h2>Browser Webcam</h2>
+            <p>Capture frames from the browser and send them to Flask for detection.</p>
+          </div>
+
+          <div class="controls">
+            <button id="start-webcam" class="btn btn-primary" type="button">Start Webcam</button>
+            <button id="stop-webcam" class="btn btn-secondary" type="button" disabled>Stop</button>
+          </div>
+
+          <div class="video-wrap video-wrap-large centered-media">
+            <video id="webcam-video" class="hidden" autoplay playsinline muted></video>
+            <img id="annotated-image" alt="Annotated detection result" />
+          </div>
+
+          <div class="capture-summary">
+            <div class="summary-pill">
+              <span>Detections</span>
+              <strong id="detection-count">0</strong>
+            </div>
+            <div class="summary-pill">
+              <span>Status</span>
+              <strong id="webcam-status">Idle</strong>
+            </div>
+            <div class="summary-pill summary-pill-wide">
+              <span>Crossings</span>
+              <strong id="vehicle-total-inline">0</strong>
+            </div>
+          </div>
+        </section>
+
+        <section id="stream-panel" class="panel mode-panel">
+          <div class="panel-head">
+            <h2>IP Camera / RTSP</h2>
+            <p>Open a network stream in the backend and render it as MJPEG in the browser.</p>
+          </div>
+
+          <label class="field">
+            <span>Stream URL</span>
+            <input
+              id="stream-source"
+              type="text"
+              placeholder="rtsp://user:password@192.168.1.10:554/stream"
+            />
+          </label>
+
+          <div class="controls">
+            <button id="open-stream" class="btn btn-primary" type="button">Open Stream</button>
+            <button id="close-stream" class="btn btn-secondary" type="button">Close</button>
+          </div>
+
+          <div class="stream-frame">
+            <img id="stream-view" alt="IP camera stream preview" />
+          </div>
+
+          <p class="helper">
+            Tip: for a local USB webcam, use the Browser Webcam section. For IP cameras,
+            use a URL that OpenCV can read.
+          </p>
+        </section>
+
+        <section class="panel vehicle-table-panel">
+          <div class="panel-head">
+            <h2>Vehicle Counting Table</h2>
+            <p>Live line-crossing count by vehicle type and direction.</p>
+          </div>
+
+          <div class="table-wrap">
+            <table class="vehicle-table">
+              <thead>
+                <tr>
+                  <th>Vehicle Type</th>
+                  <th>OUT</th>
+                  <th>IN</th>
+                </tr>
+              </thead>
+              <tbody id="vehicle-count-body">
+                <tr><td>Bike</td><td>0</td><td>0</td></tr>
+                <tr><td>Bus</td><td>0</td><td>0</td></tr>
+                <tr><td>Car</td><td>0</td><td>0</td></tr>
+                <tr><td>Ebike</td><td>0</td><td>0</td></tr>
+                <tr><td>Jeep</td><td>0</td><td>0</td></tr>
+                <tr><td>Motor</td><td>0</td><td>0</td></tr>
+                <tr><td>Tricycle</td><td>0</td><td>0</td></tr>
+                <tr><td>Truck</td><td>0</td><td>0</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <canvas id="capture-canvas" class="hidden"></canvas>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>
