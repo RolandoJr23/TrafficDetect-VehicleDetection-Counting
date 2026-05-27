@@ -27,8 +27,8 @@ let webcamBusy = false;
 let lastCaptureAt = 0;
 let activeMode = "webcam";
 
-const CAPTURE_INTERVAL_MS = 450;
-const MAX_CAPTURE_WIDTH = 256;
+const CAPTURE_INTERVAL_MS = 300;
+const MAX_CAPTURE_WIDTH = 192;
 
 function getUserMedia(constraints) {
   if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {

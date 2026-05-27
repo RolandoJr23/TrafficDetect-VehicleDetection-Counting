@@ -133,16 +133,16 @@ def draw_counting_line(frame: np.ndarray, line_y: int) -> np.ndarray:
     cv2.line(annotated, (0, line_y), (width - 1, line_y), (255, 255, 255), 1, cv2.LINE_AA)
 
     def draw_label(text: str, center_x: int) -> None:
-        font_scale = 0.34
+        font_scale = 0.28
         thickness = 1
-        padding_x = 4
-        padding_y = 3
+        padding_x = 3
+        padding_y = 2
         (text_w, text_h), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
         box_w = text_w + padding_x * 2
         box_h = text_h + baseline + padding_y * 2
         x1 = int(center_x - box_w / 2)
         x1 = max(8, min(x1, width - box_w - 8))
-        y2 = max(line_y - 6, box_h + 6)
+        y2 = max(line_y - 5, box_h + 5)
         y1 = y2 - box_h
         cv2.rectangle(annotated, (x1, y1), (x1 + box_w, y2), (0, 0, 0), -1)
         cv2.putText(
@@ -378,7 +378,7 @@ def detect_webcam_frame():
                 return jsonify({"error": "No frame image provided."}), 400
             frame = decode_base64_image(image_data)
 
-        annotated, detections = annotate_frame(frame, imgsz=256)
+        annotated, detections = annotate_frame(frame, imgsz=192)
         counts = summarize_detections(detections)
         direction_counts, direction_totals, line_y = update_line_counts(frame, detections)
         annotated = draw_counting_line(annotated, line_y)
