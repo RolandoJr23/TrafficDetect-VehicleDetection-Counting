@@ -163,11 +163,28 @@ def draw_counting_line(frame: np.ndarray, line_y: int) -> np.ndarray:
     return annotated
 
 
-def annotate_frame(frame: np.ndarray, imgsz: int = 640) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
+def annotate_frame(
+    frame: np.ndarray,
+    imgsz: int = 640,
+    use_tracking: bool = False,
+) -> Tuple[np.ndarray, List[Dict[str, Any]]]:
     model = get_model()
 
     with MODEL_LOCK:
-        result = model(frame, verbose=False, conf=0.25, imgsz=imgsz)[0]
+        if use_tracking:
+            try:
+                result = model.track(
+                    frame,
+                    persist=True,
+                    verbose=False,
+                    conf=0.25,
+                    imgsz=imgsz,
+                    tracker="bytetrack.yaml",
+                )[0]
+            except Exception:
+                result = model(frame, verbose=False, conf=0.25, imgsz=imgsz)[0]
+        else:
+            result = model(frame, verbose=False, conf=0.25, imgsz=imgsz)[0]
 
     annotated = frame.copy()
     detections: List[Dict[str, Any]] = []
@@ -179,13 +196,20 @@ def annotate_frame(frame: np.ndarray, imgsz: int = 640) -> Tuple[np.ndarray, Lis
     boxes = result.boxes.xyxy.cpu().numpy()
     classes = result.boxes.cls.cpu().numpy().astype(int)
     confs = result.boxes.conf.cpu().numpy()
+    track_ids = None
+    if getattr(result.boxes, "id", None) is not None:
+        try:
+            track_ids = result.boxes.id.cpu().numpy().astype(int)
+        except Exception:
+            track_ids = None
 
-    for box, class_id, confidence in zip(boxes, classes, confs):
+    for index, (box, class_id, confidence) in enumerate(zip(boxes, classes, confs)):
         x1, y1, x2, y2 = [int(v) for v in box.tolist()]
         class_id = int(class_id)
         confidence = float(confidence)
         class_name = names.get(class_id, str(class_id))
         label = format_label(class_name, float(confidence))
+        track_id = int(track_ids[index]) if track_ids is not None and index < len(track_ids) else None
 
         color = (
             int((class_id * 37) % 255),
@@ -219,6 +243,7 @@ def annotate_frame(frame: np.ndarray, imgsz: int = 640) -> Tuple[np.ndarray, Lis
                 "class_id": class_id,
                 "class_name": class_name,
                 "confidence": round(confidence, 4),
+                "track_id": track_id,
                 "box": {
                     "x1": int(x1),
                     "y1": int(y1),
@@ -244,12 +269,43 @@ def update_line_counts(
 
         tracks = COUNTING_STATE["tracks"]
         matched_track_ids = set()
+        tracking_enabled = any(detection.get("track_id") is not None for detection in detections)
 
         for detection in detections:
             box = detection["box"]
             class_name = str(detection.get("class_name", "Unknown"))
             center_x = (box["x1"] + box["x2"]) / 2.0
             center_y = (box["y1"] + box["y2"]) / 2.0
+
+            track_id_value = detection.get("track_id")
+            if tracking_enabled and track_id_value is not None:
+                track_key = f"track:{int(track_id_value)}"
+                track = tracks.get(track_key)
+                current_side = _frame_side(center_y, line_y)
+
+                if track is None:
+                    tracks[track_key] = {
+                        "centroid": (center_x, center_y),
+                        "class_name": class_name,
+                        "last_seen": now,
+                        "counted_side": current_side,
+                    }
+                    continue
+
+                previous_side = _frame_side(track["centroid"][1], line_y)
+                if previous_side != current_side and track.get("counted_side") != current_side:
+                    direction = "OUT" if previous_side == "above" and current_side == "below" else "IN"
+                    bucket = get_direction_bucket(class_name)
+                    bucket[direction] = int(bucket.get(direction, 0)) + 1
+                    COUNTING_STATE["direction_totals"][direction] = int(
+                        COUNTING_STATE["direction_totals"].get(direction, 0)
+                    ) + 1
+                    track["counted_side"] = current_side
+
+                track["centroid"] = (center_x, center_y)
+                track["class_name"] = class_name
+                track["last_seen"] = now
+                continue
 
             best_track_id = None
             best_distance = float("inf")
@@ -379,7 +435,7 @@ def detect_webcam_frame():
                 return jsonify({"error": "No frame image provided."}), 400
             frame = decode_base64_image(image_data)
 
-        annotated, detections = annotate_frame(frame, imgsz=192)
+        annotated, detections = annotate_frame(frame, imgsz=192, use_tracking=True)
         counts = summarize_detections(detections)
         direction_counts, direction_totals, line_y = update_line_counts(frame, detections)
         annotated = draw_counting_line(annotated, line_y)
@@ -416,7 +472,7 @@ def generate_mjpeg(source: Any):
             if not success:
                 break
 
-            annotated, _ = annotate_frame(frame, imgsz=640)
+            annotated, _ = annotate_frame(frame, imgsz=192, use_tracking=False)
             success, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
             if not success:
                 continue
