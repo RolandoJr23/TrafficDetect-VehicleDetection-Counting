@@ -1,12 +1,3 @@
----
-title: Tanauan Traffic Management System
-emoji: 🚦
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 7860
----
-
 # TrafficDetect
 
 Real-time object detection web app built with Flask and YOLOv8.
@@ -16,21 +7,45 @@ Real-time object detection web app built with Flask and YOLOv8.
 - Browser webcam mode: captures frames in the browser and sends them to Flask for inference.
 - IP camera / RTSP mode: streams video from a server-accessible source and runs YOLO detection on each frame.
 
-## Hugging Face Spaces Deployment
+## Deployment
 
-This project is set up for a **Docker Space** on Hugging Face.
+The project is split into two deploy targets:
 
-### Files used for deployment
+- Backend: Render
+- Frontend: Vercel
+
+### Backend on Render
+
+Render should deploy the Flask app from the repository root using Docker.
+
+Files used by Render:
 
 - `Dockerfile`
-- `.dockerignore`
+- `render.yaml`
 - `requirements.txt`
 
-### Notes
+Notes:
 
-- The app listens on port `7860` in Docker/Spaces.
+- The backend listens on the `PORT` environment variable.
 - Your custom model must remain at `model/best.pt`.
-- Free Spaces can sleep when unused.
+- `render.yaml` points Render at the Dockerfile and `/health` check route.
+
+### Frontend on Vercel
+
+Vercel serves the static frontend files in this repo:
+
+- `index.html`
+- `videocapture/index.html`
+- `assets/`
+- `static/`
+
+The frontend keeps using `/api/*` URLs, and Vercel proxies those requests through `api/[...path].js` to your Render backend.
+
+The template files under `templates/` are for Flask on Render, and the root-level `index.html` plus `videocapture/index.html` are the Vercel copies of the same pages.
+
+Before deploying the frontend, set this environment variable in Vercel:
+
+- `RENDER_BACKEND_URL` = your Render service URL, for example `https://your-service.onrender.com`
 
 ## Local Setup
 

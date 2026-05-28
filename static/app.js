@@ -20,6 +20,10 @@ const vehicleStatus = document.getElementById("vehicle-status");
 const vehicleCountBody = document.getElementById("vehicle-count-body");
 
 const VEHICLE_ORDER = ["Bike", "Bus", "Car", "Ebike", "Jeep", "Motor", "Tricycle", "Truck"];
+const backendConfigPromise = fetch("/api/config", { cache: "no-store" })
+  .then((response) => (response.ok ? response.json() : Promise.reject(new Error("config unavailable"))))
+  .then((data) => (data && data.backendUrl ? String(data.backendUrl).replace(/\/$/, "") : ""))
+  .catch(() => "");
 
 let webcamStream = null;
 let webcamRafId = null;
@@ -230,20 +234,28 @@ async function captureAndDetect() {
   }, "image/jpeg", 0.5);
 }
 
-function openStream() {
+function closeStream() {
+  streamView.removeAttribute("src");
+  streamView.src = "";
+}
+
+async function getBackendBaseUrl() {
+  const backendUrl = await backendConfigPromise;
+  return backendUrl || "";
+}
+
+async function openStream() {
   const source = streamSourceInput.value.trim();
   if (!source) {
     alert("Please enter an IP camera / RTSP source URL.");
     return;
   }
 
-  const url = `/api/stream?source=${encodeURIComponent(source)}`;
-  streamView.src = url;
-}
-
-function closeStream() {
-  streamView.removeAttribute("src");
-  streamView.src = "";
+  const backendBaseUrl = await getBackendBaseUrl();
+  const streamUrl = backendBaseUrl
+    ? `${backendBaseUrl}/api/stream?source=${encodeURIComponent(source)}`
+    : `/api/stream?source=${encodeURIComponent(source)}`;
+  streamView.src = streamUrl;
 }
 
 startBtn.addEventListener("click", startWebcam);

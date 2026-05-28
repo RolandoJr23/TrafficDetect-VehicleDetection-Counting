@@ -1,0 +1,10 @@
+.venv
+__pycache__
+model/
+weights.zip
+main.py
+app.py
+templates/
+Dockerfile
+requirements.txt
+TrafficDetect/
