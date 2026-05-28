@@ -31,6 +31,7 @@ The model is trained to detect:
 - **Backend:** Python, Flask, Gunicorn
 - **Computer Vision:** Ultralytics YOLOv8, OpenCV, NumPy
 - **Model File:** Custom-trained YOLO checkpoint at `model/best.pt`
+- **Development Tools:** Google Colab, VSCode
 
 ## Project Structure
 
