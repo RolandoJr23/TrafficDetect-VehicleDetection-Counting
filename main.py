@@ -36,8 +36,10 @@ TRACK_MATCH_DISTANCE = 90.0
 TRACK_TTL_SECONDS = 1.5
 COUNT_RESET_SECONDS = 5.0
 DETECTION_IMGSZ = 128
-DETECTION_CONFIDENCE = 0.35
-DETECTION_JPEG_QUALITY = 75
+DETECTION_CONFIDENCE = 0.45
+DETECTION_JPEG_QUALITY = 60
+DETECTION_MAX_DET = 10
+MAX_DETECTION_SIDE = 256
 
 
 @app.after_request
@@ -74,7 +76,20 @@ def detection_kwargs(imgsz: int | None = None) -> Dict[str, Any]:
         "verbose": False,
         "conf": DETECTION_CONFIDENCE,
         "imgsz": imgsz or DETECTION_IMGSZ,
+        "max_det": DETECTION_MAX_DET,
     }
+
+
+def resize_for_detection(frame: np.ndarray) -> np.ndarray:
+    height, width = frame.shape[:2]
+    longest_side = max(height, width)
+    if longest_side <= MAX_DETECTION_SIDE:
+        return frame
+
+    scale = MAX_DETECTION_SIDE / float(longest_side)
+    new_width = max(1, int(width * scale))
+    new_height = max(1, int(height * scale))
+    return cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_AREA)
 
 
 def get_model() -> YOLO:
@@ -452,6 +467,7 @@ def detect_webcam_frame():
                 return jsonify({"error": "No frame image provided."}), 400
             frame = decode_base64_image(image_data)
 
+        frame = resize_for_detection(frame)
         annotated, detections = annotate_frame(frame, imgsz=DETECTION_IMGSZ, use_tracking=False)
         counts = summarize_detections(detections)
         direction_counts, direction_totals, line_y = update_line_counts(frame, detections)
@@ -489,6 +505,7 @@ def generate_mjpeg(source: Any):
             if not success:
                 break
 
+            frame = resize_for_detection(frame)
             annotated, _ = annotate_frame(frame, imgsz=DETECTION_IMGSZ, use_tracking=False)
             success, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), DETECTION_JPEG_QUALITY])
             if not success:

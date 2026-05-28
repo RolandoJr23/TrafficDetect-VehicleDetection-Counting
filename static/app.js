@@ -92,10 +92,6 @@ function updateVehicleTable(counts) {
   }).join("");
 }
 
-function apiUrl(path) {
-  return BACKEND_BASE_URL ? `${BACKEND_BASE_URL}${path}` : path;
-}
-
 function setMode(mode) {
   const previousMode = activeMode;
   activeMode = mode;
@@ -121,7 +117,7 @@ function setMode(mode) {
 
 async function startWebcam() {
   try {
-    await fetch(apiUrl("/api/counting/reset"), { method: "POST" });
+    await fetch("/api/counting/reset", { method: "POST" });
     webcamStream = await getUserMedia({
       video: {
         facingMode: "environment",
@@ -207,7 +203,7 @@ async function captureAndDetect() {
     formData.append("frame", blob, "frame.jpg");
 
     try {
-      const response = await fetch(apiUrl("/api/detect"), {
+      const response = await fetch("/api/detect", {
         method: "POST",
         body: formData,
       });
