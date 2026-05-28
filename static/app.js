@@ -58,12 +58,14 @@ function setStatus(message) {
   statusLabel.textContent = message;
 }
 
-function setAnnotatedPreviewFromCanvas() {
-  if (!canvas.width || !canvas.height) {
-    return;
-  }
+function showLiveVideoPreview() {
+  video.classList.remove("hidden");
+  annotatedImage.classList.add("hidden");
+}
 
-  annotatedImage.src = canvas.toDataURL("image/jpeg", 0.72);
+function showAnnotatedPreview() {
+  video.classList.add("hidden");
+  annotatedImage.classList.remove("hidden");
 }
 
 function enableDemoMode(reason) {
@@ -77,6 +79,7 @@ function enableDemoMode(reason) {
   setStatus("Demo mode");
   setVehicleSummary({ OUT: 0, IN: 0 }, "Backend unavailable, using local preview");
   updateVehicleTable({});
+  showLiveVideoPreview();
 }
 
 function setVehicleSummary(total, message) {
@@ -151,6 +154,8 @@ async function startWebcam() {
 
     video.srcObject = webcamStream;
     annotatedImage.src = "";
+    annotatedImage.alt = "Annotated detection result";
+    showLiveVideoPreview();
     startBtn.disabled = true;
     stopBtn.disabled = false;
     setStatus("Streaming");
@@ -192,6 +197,11 @@ function captureLoop(timestamp) {
     return;
   }
 
+  if (demoMode) {
+    webcamRafId = window.requestAnimationFrame(captureLoop);
+    return;
+  }
+
   if (!webcamBusy && timestamp - lastCaptureAt >= CAPTURE_INTERVAL_MS) {
     lastCaptureAt = timestamp;
     captureAndDetect();
@@ -213,7 +223,6 @@ async function captureAndDetect() {
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  setAnnotatedPreviewFromCanvas();
 
   if (demoMode) {
     setStatus("Demo mode");
@@ -256,6 +265,7 @@ async function captureAndDetect() {
       }
 
       annotatedImage.src = data.image;
+      showAnnotatedPreview();
       detectionCount.textContent = String(data.count ?? 0);
       updateVehicleTable(data.direction_counts || {});
       setVehicleSummary(
@@ -266,7 +276,6 @@ async function captureAndDetect() {
     } catch (error) {
       console.error(error);
       enableDemoMode(error?.message || "Detection unavailable");
-      setAnnotatedPreviewFromCanvas();
     } finally {
       webcamBusy = false;
     }
