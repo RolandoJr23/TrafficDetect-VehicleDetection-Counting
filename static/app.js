@@ -20,10 +20,7 @@ const vehicleStatus = document.getElementById("vehicle-status");
 const vehicleCountBody = document.getElementById("vehicle-count-body");
 
 const VEHICLE_ORDER = ["Bike", "Bus", "Car", "Ebike", "Jeep", "Motor", "Tricycle", "Truck"];
-const backendConfigPromise = fetch("/api/config", { cache: "no-store" })
-  .then((response) => (response.ok ? response.json() : Promise.reject(new Error("config unavailable"))))
-  .then((data) => (data && data.backendUrl ? String(data.backendUrl).replace(/\/$/, "") : ""))
-  .catch(() => "");
+const BACKEND_BASE_URL = String(window.RENDER_BACKEND_URL || "").replace(/\/$/, "");
 
 let webcamStream = null;
 let webcamRafId = null;
@@ -95,6 +92,10 @@ function updateVehicleTable(counts) {
   }).join("");
 }
 
+function apiUrl(path) {
+  return BACKEND_BASE_URL ? `${BACKEND_BASE_URL}${path}` : path;
+}
+
 function setMode(mode) {
   const previousMode = activeMode;
   activeMode = mode;
@@ -120,7 +121,7 @@ function setMode(mode) {
 
 async function startWebcam() {
   try {
-    await fetch("/api/counting/reset", { method: "POST" });
+    await fetch(apiUrl("/api/counting/reset"), { method: "POST" });
     webcamStream = await getUserMedia({
       video: {
         facingMode: "environment",
@@ -206,7 +207,7 @@ async function captureAndDetect() {
     formData.append("frame", blob, "frame.jpg");
 
     try {
-      const response = await fetch("/api/detect", {
+      const response = await fetch(apiUrl("/api/detect"), {
         method: "POST",
         body: formData,
       });
@@ -240,8 +241,7 @@ function closeStream() {
 }
 
 async function getBackendBaseUrl() {
-  const backendUrl = await backendConfigPromise;
-  return backendUrl || "";
+  return BACKEND_BASE_URL;
 }
 
 async function openStream() {

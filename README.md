@@ -39,13 +39,15 @@ Vercel serves the static frontend files in this repo:
 - `assets/`
 - `static/`
 
-The frontend keeps using `/api/*` URLs, and Vercel proxies those requests through `api/[...path].js` to your Render backend.
+The frontend sends requests directly to the Render backend URL, and the Flask app allows cross-origin requests from Vercel.
 
 The template files under `templates/` are for Flask on Render, and the root-level `index.html` plus `videocapture/index.html` are the Vercel copies of the same pages.
 
-Before deploying the frontend, set this environment variable in Vercel:
+The frontend currently points to:
 
-- `RENDER_BACKEND_URL` = your Render service URL, for example `https://your-service.onrender.com`
+- `https://trafficdetect-vehicledetection-counting.onrender.com`
+
+If your Render URL changes, update the `window.RENDER_BACKEND_URL` value in the HTML files.
 
 ## Local Setup
 

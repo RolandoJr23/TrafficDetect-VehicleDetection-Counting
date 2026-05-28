@@ -129,5 +129,11 @@
         <a class="btn btn-primary" href="/videocapture">Launch Video Capture</a>
       </section>
     </div>
+    <script>
+      window.RENDER_BACKEND_URL =
+        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? ""
+          : "https://trafficdetect-vehicledetection-counting.onrender.com";
+    </script>
   </body>
 </html>

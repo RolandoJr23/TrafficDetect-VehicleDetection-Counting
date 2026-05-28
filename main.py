@@ -37,6 +37,14 @@ TRACK_TTL_SECONDS = 1.5
 COUNT_RESET_SECONDS = 5.0
 
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
 def resolve_model_path() -> Path:
     if not MODEL_PATH.exists():
         raise FileNotFoundError(

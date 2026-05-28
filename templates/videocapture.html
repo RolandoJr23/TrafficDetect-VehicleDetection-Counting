@@ -171,6 +171,12 @@
       </main>
     </div>
 
+    <script>
+      window.RENDER_BACKEND_URL =
+        window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? ""
+          : "https://trafficdetect-vehicledetection-counting.onrender.com";
+    </script>
     <canvas id="capture-canvas" class="hidden"></canvas>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
   </body>
