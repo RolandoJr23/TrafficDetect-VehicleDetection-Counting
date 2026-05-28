@@ -71,7 +71,7 @@
         <section id="webcam-panel" class="panel mode-panel active">
           <div class="panel-head">
             <h2>Browser Webcam</h2>
-            <p>Capture frames from the browser and send them to Flask for detection.</p>
+            <p>Capture frames from the browser and send them to the detector when the backend is available.</p>
           </div>
 
           <div class="controls">
@@ -127,6 +127,7 @@
           <p class="helper">
             Tip: for a local USB webcam, use the Browser Webcam section. For IP cameras,
             use a URL that OpenCV can read.
+            If the backend is unavailable, the page will stay in local preview mode.
           </p>
         </section>
 

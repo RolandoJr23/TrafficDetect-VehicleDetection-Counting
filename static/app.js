@@ -27,6 +27,7 @@ let webcamRafId = null;
 let webcamBusy = false;
 let lastCaptureAt = 0;
 let activeMode = "webcam";
+let demoMode = false;
 
 const CAPTURE_INTERVAL_MS = 900;
 const MAX_CAPTURE_WIDTH = 128;
@@ -55,6 +56,27 @@ function getUserMedia(constraints) {
 
 function setStatus(message) {
   statusLabel.textContent = message;
+}
+
+function setAnnotatedPreviewFromCanvas() {
+  if (!canvas.width || !canvas.height) {
+    return;
+  }
+
+  annotatedImage.src = canvas.toDataURL("image/jpeg", 0.72);
+}
+
+function enableDemoMode(reason) {
+  if (!demoMode) {
+    demoMode = true;
+    console.warn("Switching to demo mode:", reason);
+  }
+
+  annotatedImage.alt = "Local webcam preview";
+  detectionCount.textContent = "0";
+  setStatus("Demo mode");
+  setVehicleSummary({ OUT: 0, IN: 0 }, "Backend unavailable, using local preview");
+  updateVehicleTable({});
 }
 
 function setVehicleSummary(total, message) {
@@ -191,6 +213,13 @@ async function captureAndDetect() {
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  setAnnotatedPreviewFromCanvas();
+
+  if (demoMode) {
+    setStatus("Demo mode");
+    webcamBusy = false;
+    return;
+  }
 
   canvas.toBlob(async (blob) => {
     if (!blob) {
@@ -206,10 +235,24 @@ async function captureAndDetect() {
         method: "POST",
         body: formData,
       });
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+      const responseText = await response.text();
+      let data = null;
+
+      if (contentType.includes("application/json")) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          throw new Error("Detection service returned invalid JSON.");
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || "Detection failed");
+        throw new Error((data && data.error) || responseText || "Detection failed");
+      }
+
+      if (!data) {
+        throw new Error("Detection service returned an unexpected response.");
       }
 
       annotatedImage.src = data.image;
@@ -222,8 +265,8 @@ async function captureAndDetect() {
       setStatus("Streaming");
     } catch (error) {
       console.error(error);
-      setStatus("Error");
-      setVehicleSummary({ OUT: 0, IN: 0 }, "Detection error");
+      enableDemoMode(error?.message || "Detection unavailable");
+      setAnnotatedPreviewFromCanvas();
     } finally {
       webcamBusy = false;
     }
@@ -243,6 +286,12 @@ async function openStream() {
   const source = streamSourceInput.value.trim();
   if (!source) {
     alert("Please enter an IP camera / RTSP source URL.");
+    return;
+  }
+
+  if (demoMode) {
+    alert("IP camera streaming is disabled in demo mode.");
+    setStatus("Demo mode");
     return;
   }
 
