@@ -34,9 +34,9 @@ async function readRequestBody(req) {
   return Buffer.concat(chunks);
 }
 
-module.exports = async function handler(req, res) {
+async function proxyRequest(req, res, targetPath) {
   try {
-    const backendUrl = new URL(req.url, getBackendBaseUrl());
+    const backendUrl = new URL(targetPath, getBackendBaseUrl());
     const headers = copyHeaders(req.headers);
     const body = await readRequestBody(req);
 
@@ -76,4 +76,6 @@ module.exports = async function handler(req, res) {
     res.setHeader("content-type", "application/json");
     res.end(JSON.stringify({ error: error instanceof Error ? error.message : "Proxy request failed" }));
   }
-};
+}
+
+module.exports = { proxyRequest };
