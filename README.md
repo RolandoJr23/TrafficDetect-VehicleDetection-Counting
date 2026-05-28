@@ -1,53 +1,39 @@
-# TrafficDetect
+# Traffic Detect: Vehicle Detection & Counting System
 
-Real-time object detection web app built with Flask and YOLOv8.
+Rapid infrastructure growth in Tanauan City increased traffic congestion along Pres. J.P. Laurel Highway and A. Mabini Avenue. Using Operational Research and AI with the YOLOv8 algorithm, the study provides real-time vehicle detection and traffic flow monitoring to support the City TMO in traffic planning and regulation.
 
-## What it does
+## Core Features
 
-- Browser webcam mode: captures frames in the browser and sends them to Flask for inference.
-- IP camera / RTSP mode: streams video from a server-accessible source and runs YOLO detection on each frame.
+- Browser webcam mode for live frame capture and detection.
+- IP camera / RTSP mode for server-side streaming input.
+- Custom YOLOv8 object detection using `model/best.pt`.
+- Annotated detection preview with bounding boxes and confidence scores.
+- Live vehicle counting with OUT / IN totals.
+- Line-crossing detection for counting vehicles as they pass through the frame.
+- Per-class counts for the supported vehicle types.
 
-## Deployment
+## Tech Stack
 
-The project is split into two deploy targets:
+- **Backend:** Python, Flask, Gunicorn
+- **Computer Vision:** Ultralytics YOLOv8, OpenCV, NumPy
+- **Frontend:** HTML, CSS, JavaScript
+- **Model File:** Custom-trained YOLO checkpoint at `model/best.pt`
 
-- Backend: Render
-- Frontend: Vercel
+## Project Structure
 
-### Backend on Render
-
-Render should deploy the Flask app from the repository root using Docker.
-
-Files used by Render:
-
-- `Dockerfile`
-- `render.yaml`
-- `requirements.txt`
-
-Notes:
-
-- The backend listens on the `PORT` environment variable.
-- Your custom model must remain at `model/best.pt`.
-- `render.yaml` points Render at the Dockerfile and `/health` check route.
-
-### Frontend on Vercel
-
-Vercel serves the static frontend files in this repo:
-
-- `index.html`
-- `videocapture/index.html`
-- `assets/`
-- `static/`
-
-The frontend sends requests directly to the Render backend URL, and the Flask app allows cross-origin requests from Vercel.
-
-The template files under `templates/` are for Flask on Render, and the root-level `index.html` plus `videocapture/index.html` are the Vercel copies of the same pages.
-
-The frontend currently points to:
-
-- `https://trafficdetect-vehicledetection-counting.onrender.com`
-
-If your Render URL changes, update the `window.RENDER_BACKEND_URL` value in the HTML files.
+```text
+traffic-detect/
+├── model/
+│   └── best.pt             # Custom YOLOv8 model weights
+├── static/
+│   ├── css/                # Stylesheets for the web UI
+│   └── js/                 # JavaScript for webcam capture and API logic
+├── templates/
+│   └── index.html          # Main dashboard interface
+├── main.py                 # Flask application entry point and YOLO inference
+├── requirements.txt        # Python dependencies
+└── README.md               # Project documentation
+```
 
 ## Local Setup
 
@@ -72,7 +58,7 @@ If your Render URL changes, update the `window.RENDER_BACKEND_URL` value in the 
 
 - Browser webcam access happens in the client browser, so permission prompts are expected.
 - For IP cameras, use a source URL that OpenCV can read, such as an RTSP stream.
-- This project is configured for your custom training checkpoint, so `yolov8s.pt` and `yolov8x.pt` are not used.
+- This project is configured for your custom training checkpoint.
 
 ## Supported Classes
 
@@ -86,3 +72,11 @@ The model is trained to detect:
 - Motor
 - Tricycle
 - Truck
+
+## License 
+
+This project does not currently specify a license.
+
+## Researcher & Developer
+
+Research & Developed by Rolando Jr Hernandez

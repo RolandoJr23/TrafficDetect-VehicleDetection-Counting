@@ -33,14 +33,15 @@ COUNTING_STATE: Dict[str, Any] = {
 }
 
 COUNT_LINE_RATIO = 0.78
+COUNT_LINE_BUFFER = 18
 TRACK_MATCH_DISTANCE = 90.0
 TRACK_TTL_SECONDS = 1.5
 COUNT_RESET_SECONDS = 5.0
-DETECTION_IMGSZ = 128
+DETECTION_IMGSZ = 480
 DETECTION_CONFIDENCE = 0.45
-DETECTION_JPEG_QUALITY = 60
+DETECTION_JPEG_QUALITY = 80
 DETECTION_MAX_DET = 10
-MAX_DETECTION_SIDE = 256
+MAX_DETECTION_SIDE = 640
 
 
 @app.after_request
@@ -125,6 +126,10 @@ def format_label(name: str, confidence: float) -> str:
 
 def _frame_side(y: float, line_y: int) -> str:
     return "above" if y < line_y else "below"
+
+
+def _crosses_line(box: Dict[str, int], line_y: int, buffer: int = COUNT_LINE_BUFFER) -> bool:
+    return box["y1"] <= line_y + buffer and box["y2"] >= line_y - buffer
 
 
 def reset_counting_state(frame_shape: Tuple[int, int] | None = None) -> None:
@@ -309,6 +314,7 @@ def update_line_counts(
             class_name = str(detection.get("class_name", "Unknown"))
             center_x = (box["x1"] + box["x2"]) / 2.0
             center_y = (box["y1"] + box["y2"]) / 2.0
+            crosses_line = _crosses_line(box, line_y)
 
             track_id_value = detection.get("track_id")
             if tracking_enabled and track_id_value is not None:
@@ -326,7 +332,7 @@ def update_line_counts(
                     continue
 
                 previous_side = _frame_side(track["centroid"][1], line_y)
-                if previous_side != current_side and track.get("counted_side") != current_side:
+                if track.get("counted_side") != current_side and (previous_side != current_side or crosses_line):
                     direction = "OUT" if previous_side == "above" and current_side == "below" else "IN"
                     bucket = get_direction_bucket(class_name)
                     bucket[direction] = int(bucket.get(direction, 0)) + 1
@@ -382,7 +388,7 @@ def update_line_counts(
             previous_side = _frame_side(track["centroid"][1], line_y)
             current_side = _frame_side(center_y, line_y)
 
-            if previous_side != current_side and track.get("counted_side") != current_side:
+            if track.get("counted_side") != current_side and (previous_side != current_side or crosses_line):
                 # Crossing downward is treated as OUT, upward as IN.
                 direction = "OUT" if previous_side == "above" and current_side == "below" else "IN"
                 bucket = get_direction_bucket(class_name)
@@ -436,6 +442,11 @@ def parse_source(source: str) -> Any:
     return source
 
 
+def should_use_tracking() -> bool:
+    host = (request.host or "").split(":", 1)[0].lower()
+    return host in {"localhost", "127.0.0.1", "::1"}
+
+
 try:
     get_model()
 except Exception:
@@ -476,7 +487,11 @@ def detect_webcam_frame():
             frame = decode_base64_image(image_data)
 
         frame = resize_for_detection(frame)
-        annotated, detections = annotate_frame(frame, imgsz=DETECTION_IMGSZ, use_tracking=False)
+        annotated, detections = annotate_frame(
+            frame,
+            imgsz=DETECTION_IMGSZ,
+            use_tracking=should_use_tracking(),
+        )
         counts = summarize_detections(detections)
         direction_counts, direction_totals, line_y = update_line_counts(frame, detections)
         annotated = draw_counting_line(annotated, line_y)
@@ -514,7 +529,11 @@ def generate_mjpeg(source: Any):
                 break
 
             frame = resize_for_detection(frame)
-            annotated, _ = annotate_frame(frame, imgsz=DETECTION_IMGSZ, use_tracking=False)
+            annotated, _ = annotate_frame(
+                frame,
+                imgsz=DETECTION_IMGSZ,
+                use_tracking=should_use_tracking(),
+            )
             success, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), DETECTION_JPEG_QUALITY])
             if not success:
                 continue

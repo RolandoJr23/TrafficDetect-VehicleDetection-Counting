@@ -21,16 +21,21 @@ const vehicleCountBody = document.getElementById("vehicle-count-body");
 
 const VEHICLE_ORDER = ["Bike", "Bus", "Car", "Ebike", "Jeep", "Motor", "Tricycle", "Truck"];
 const BACKEND_BASE_URL = String(window.RENDER_BACKEND_URL || "").replace(/\/$/, "");
+const IS_LOCAL_HOST = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
 let webcamStream = null;
 let webcamRafId = null;
+let webcamFrameCallbackId = null;
 let webcamBusy = false;
 let lastCaptureAt = 0;
 let activeMode = "webcam";
 let demoMode = false;
 
-const CAPTURE_INTERVAL_MS = 900;
-const MAX_CAPTURE_WIDTH = 128;
+const CAPTURE_INTERVAL_MS = IS_LOCAL_HOST ? 400 : 900;
+const MAX_CAPTURE_WIDTH = IS_LOCAL_HOST ? 960 : 128;
+const CAMERA_WIDTH = IS_LOCAL_HOST ? 1280 : 480;
+const CAMERA_HEIGHT = IS_LOCAL_HOST ? 720 : 360;
+const CAMERA_FPS = IS_LOCAL_HOST ? 30 : 24;
 
 function getUserMedia(constraints) {
   if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
@@ -60,12 +65,13 @@ function setStatus(message) {
 
 function showLiveVideoPreview() {
   video.classList.remove("hidden");
-  annotatedImage.classList.add("hidden");
+  annotatedImage.classList.remove("hidden");
+  annotatedImage.style.opacity = "0";
 }
 
 function showAnnotatedPreview() {
-  video.classList.add("hidden");
   annotatedImage.classList.remove("hidden");
+  annotatedImage.style.opacity = "1";
 }
 
 function enableDemoMode(reason) {
@@ -145,16 +151,18 @@ async function startWebcam() {
     webcamStream = await getUserMedia({
       video: {
         facingMode: "environment",
-        width: { ideal: 480 },
-        height: { ideal: 360 },
-        frameRate: { ideal: 15, max: 24 },
+        width: { ideal: IS_LOCAL_HOST ? 1920 : CAMERA_WIDTH },
+        height: { ideal: IS_LOCAL_HOST ? 1080 : CAMERA_HEIGHT },
+        frameRate: { ideal: CAMERA_FPS, max: CAMERA_FPS },
       },
       audio: false,
     });
 
     video.srcObject = webcamStream;
+    await video.play();
     annotatedImage.src = "";
     annotatedImage.alt = "Annotated detection result";
+    annotatedImage.style.opacity = "0";
     showLiveVideoPreview();
     startBtn.disabled = true;
     stopBtn.disabled = false;
@@ -162,8 +170,12 @@ async function startWebcam() {
     setVehicleSummary({ OUT: 0, IN: 0 }, "Waiting for detection");
     updateVehicleTable({});
 
+    if (IS_LOCAL_HOST) {
+      fetch("/api/counting/reset", { method: "POST" }).catch(() => {});
+    }
+
     lastCaptureAt = 0;
-    webcamRafId = window.requestAnimationFrame(captureLoop);
+    scheduleCaptureLoop();
   } catch (error) {
     console.error(error);
     setStatus("Camera denied");
@@ -179,17 +191,45 @@ function stopWebcam() {
     webcamRafId = null;
   }
 
+  if (webcamFrameCallbackId !== null && typeof video.cancelVideoFrameCallback === "function") {
+    video.cancelVideoFrameCallback(webcamFrameCallbackId);
+    webcamFrameCallbackId = null;
+  }
+
   if (webcamStream) {
     webcamStream.getTracks().forEach((track) => track.stop());
     webcamStream = null;
   }
 
   video.srcObject = null;
+  video.onloadedmetadata = null;
   startBtn.disabled = false;
   stopBtn.disabled = true;
   setStatus("Idle");
   setVehicleSummary({ OUT: 0, IN: 0 }, "Waiting for live detection");
   updateVehicleTable({});
+}
+
+function scheduleCaptureLoop() {
+  if (!webcamStream) {
+    return;
+  }
+
+  if (typeof video.requestVideoFrameCallback === "function") {
+    if (webcamFrameCallbackId !== null) {
+      return;
+    }
+    webcamFrameCallbackId = video.requestVideoFrameCallback((now, metadata) => {
+      webcamFrameCallbackId = null;
+      captureLoop(metadata?.mediaTime ? metadata.mediaTime * 1000 : now);
+    });
+    return;
+  }
+
+  if (webcamRafId !== null) {
+    return;
+  }
+  webcamRafId = window.requestAnimationFrame(captureLoop);
 }
 
 function captureLoop(timestamp) {
@@ -198,7 +238,7 @@ function captureLoop(timestamp) {
   }
 
   if (demoMode) {
-    webcamRafId = window.requestAnimationFrame(captureLoop);
+    scheduleCaptureLoop();
     return;
   }
 
@@ -207,7 +247,7 @@ function captureLoop(timestamp) {
     captureAndDetect();
   }
 
-  webcamRafId = window.requestAnimationFrame(captureLoop);
+  scheduleCaptureLoop();
 }
 
 async function captureAndDetect() {
@@ -223,12 +263,6 @@ async function captureAndDetect() {
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  if (demoMode) {
-    setStatus("Demo mode");
-    webcamBusy = false;
-    return;
-  }
 
   canvas.toBlob(async (blob) => {
     if (!blob) {
@@ -275,11 +309,13 @@ async function captureAndDetect() {
       setStatus("Streaming");
     } catch (error) {
       console.error(error);
-      enableDemoMode(error?.message || "Detection unavailable");
+      setStatus("Detection error");
+      setVehicleSummary({ OUT: 0, IN: 0 }, "Detection unavailable");
+      showLiveVideoPreview();
     } finally {
       webcamBusy = false;
     }
-  }, "image/jpeg", 0.4);
+  }, "image/jpeg", 0.8);
 }
 
 function closeStream() {
