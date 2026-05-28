@@ -28,8 +28,8 @@ let webcamBusy = false;
 let lastCaptureAt = 0;
 let activeMode = "webcam";
 
-const CAPTURE_INTERVAL_MS = 300;
-const MAX_CAPTURE_WIDTH = 192;
+const CAPTURE_INTERVAL_MS = 900;
+const MAX_CAPTURE_WIDTH = 128;
 
 function getUserMedia(constraints) {
   if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
@@ -232,7 +232,7 @@ async function captureAndDetect() {
     } finally {
       webcamBusy = false;
     }
-  }, "image/jpeg", 0.5);
+  }, "image/jpeg", 0.4);
 }
 
 function closeStream() {

@@ -35,6 +35,9 @@ COUNT_LINE_RATIO = 0.78
 TRACK_MATCH_DISTANCE = 90.0
 TRACK_TTL_SECONDS = 1.5
 COUNT_RESET_SECONDS = 5.0
+DETECTION_IMGSZ = 128
+DETECTION_CONFIDENCE = 0.35
+DETECTION_JPEG_QUALITY = 75
 
 
 @app.after_request
@@ -64,6 +67,14 @@ def load_model() -> YOLO:
         # Fusing is optional and can fail for some exported weights.
         pass
     return model
+
+
+def detection_kwargs(imgsz: int | None = None) -> Dict[str, Any]:
+    return {
+        "verbose": False,
+        "conf": DETECTION_CONFIDENCE,
+        "imgsz": imgsz or DETECTION_IMGSZ,
+    }
 
 
 def get_model() -> YOLO:
@@ -184,15 +195,13 @@ def annotate_frame(
                 result = model.track(
                     frame,
                     persist=True,
-                    verbose=False,
-                    conf=0.25,
-                    imgsz=imgsz,
+                    **detection_kwargs(imgsz),
                     tracker="bytetrack.yaml",
                 )[0]
             except Exception:
-                result = model(frame, verbose=False, conf=0.25, imgsz=imgsz)[0]
+                result = model(frame, **detection_kwargs(imgsz))[0]
         else:
-            result = model(frame, verbose=False, conf=0.25, imgsz=imgsz)[0]
+            result = model(frame, **detection_kwargs(imgsz))[0]
 
     annotated = frame.copy()
     detections: List[Dict[str, Any]] = []
@@ -397,7 +406,7 @@ def summarize_detections(detections: List[Dict[str, Any]]) -> Dict[str, int]:
 
 
 def encode_image_to_data_url(frame: np.ndarray) -> str:
-    success, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+    success, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), DETECTION_JPEG_QUALITY])
     if not success:
         raise ValueError("Unable to encode image as JPEG.")
     base64_image = base64.b64encode(buffer.tobytes()).decode("utf-8")
@@ -443,7 +452,7 @@ def detect_webcam_frame():
                 return jsonify({"error": "No frame image provided."}), 400
             frame = decode_base64_image(image_data)
 
-        annotated, detections = annotate_frame(frame, imgsz=192, use_tracking=True)
+        annotated, detections = annotate_frame(frame, imgsz=DETECTION_IMGSZ, use_tracking=False)
         counts = summarize_detections(detections)
         direction_counts, direction_totals, line_y = update_line_counts(frame, detections)
         annotated = draw_counting_line(annotated, line_y)
@@ -480,8 +489,8 @@ def generate_mjpeg(source: Any):
             if not success:
                 break
 
-            annotated, _ = annotate_frame(frame, imgsz=192, use_tracking=False)
-            success, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+            annotated, _ = annotate_frame(frame, imgsz=DETECTION_IMGSZ, use_tracking=False)
+            success, buffer = cv2.imencode(".jpg", annotated, [int(cv2.IMWRITE_JPEG_QUALITY), DETECTION_JPEG_QUALITY])
             if not success:
                 continue
 
