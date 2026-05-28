@@ -14,9 +14,9 @@ Rapid infrastructure growth in Tanauan City increased traffic congestion along P
 
 ## Tech Stack
 
+- **Frontend:** HTML, CSS, JavaScript
 - **Backend:** Python, Flask, Gunicorn
 - **Computer Vision:** Ultralytics YOLOv8, OpenCV, NumPy
-- **Frontend:** HTML, CSS, JavaScript
 - **Model File:** Custom-trained YOLO checkpoint at `model/best.pt`
 
 ## Project Structure
