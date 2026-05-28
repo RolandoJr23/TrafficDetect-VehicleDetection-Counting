@@ -117,7 +117,6 @@ function setMode(mode) {
 
 async function startWebcam() {
   try {
-    await fetch("/api/counting/reset", { method: "POST" });
     webcamStream = await getUserMedia({
       video: {
         facingMode: "environment",

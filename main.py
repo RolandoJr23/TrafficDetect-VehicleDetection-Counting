@@ -4,6 +4,7 @@ import base64
 import os
 import time
 import threading
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -433,6 +434,13 @@ def parse_source(source: str) -> Any:
     if source.isdigit():
         return int(source)
     return source
+
+
+try:
+    get_model()
+except Exception:
+    print("Model preload failed:")
+    traceback.print_exc()
 
 
 @app.route("/")
