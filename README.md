@@ -12,6 +12,19 @@ Rapid infrastructure growth in Tanauan City increased traffic congestion along P
 - Line-crossing detection for counting vehicles as they pass through the frame.
 - Per-class counts for the supported vehicle types.
 
+## Supported Classes
+
+The model is trained to detect:
+
+- Bike
+- Bus
+- Car
+- Ebike
+- Jeep
+- Motor
+- Tricycle
+- Truck
+
 ## Tech Stack
 
 - **Frontend:** HTML, CSS, JavaScript
@@ -59,19 +72,6 @@ traffic-detect/
 - Browser webcam access happens in the client browser, so permission prompts are expected.
 - For IP cameras, use a source URL that OpenCV can read, such as an RTSP stream.
 - This project is configured for your custom training checkpoint.
-
-## Supported Classes
-
-The model is trained to detect:
-
-- Bike
-- Bus
-- Car
-- Ebike
-- Jeep
-- Motor
-- Tricycle
-- Truck
 
 ## License 
 
