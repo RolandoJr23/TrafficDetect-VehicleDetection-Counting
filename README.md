@@ -28,7 +28,7 @@ The model is trained to detect:
 ## Tech Stack
 
 - **Frontend:** HTML, CSS, JavaScript
-- **Backend:** Python, Flask, Gunicorn
+- **Backend:** Python, PyTorch, Flask, Gunicorn
 - **Computer Vision:** Ultralytics YOLOv8, OpenCV, NumPy
 - **Model File:** Custom-trained YOLO checkpoint at `model/best.pt`
 - **Development Tools:** Google Colab, VSCode
