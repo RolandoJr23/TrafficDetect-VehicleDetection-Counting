@@ -31,10 +31,10 @@ let lastCaptureAt = 0;
 let activeMode = "webcam";
 let demoMode = false;
 
-const CAPTURE_INTERVAL_MS = IS_LOCAL_HOST ? 400 : 900;
-const MAX_CAPTURE_WIDTH = IS_LOCAL_HOST ? 960 : 128;
-const CAMERA_WIDTH = IS_LOCAL_HOST ? 1280 : 480;
-const CAMERA_HEIGHT = IS_LOCAL_HOST ? 720 : 360;
+const CAPTURE_INTERVAL_MS = IS_LOCAL_HOST ? 100 : 400;
+const MAX_CAPTURE_WIDTH = IS_LOCAL_HOST ? 1280 : 640;
+const CAMERA_WIDTH = IS_LOCAL_HOST ? 1920 : 640;
+const CAMERA_HEIGHT = IS_LOCAL_HOST ? 1080 : 480;
 const CAMERA_FPS = IS_LOCAL_HOST ? 30 : 24;
 
 function getUserMedia(constraints) {
@@ -315,7 +315,7 @@ async function captureAndDetect() {
     } finally {
       webcamBusy = false;
     }
-  }, "image/jpeg", 0.8);
+  }, "image/jpeg", 0.9);
 }
 
 function closeStream() {
